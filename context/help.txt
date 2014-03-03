@@ -1,0 +1,47 @@
+Usage: run [COMMAND ...]
+
+Run OpenStreetMap related operations in a docker container.
+
+Positional arguments:
+  COMMAND          The command to run. (default: help)
+
+Commands:
+  help             Show this help message
+  initdb           Initialise the postgres database
+  startdb          Start the postgresql database
+  createuser       Create the osm user in the database
+  createdb         Create the osm database
+  createdbfuncs    Create required database functions
+  migrate          Migrate the osm database to a newer schema
+  import           Import osm data into the database
+  startservices    Start the osm web services
+  cli              Drop into a bash shell
+  dropdb           Drop the osm database
+
+Set up a database saved on an external volume:
+  The following command will initialise the postgresql database on an external
+  volume that can be used to persist the data:
+
+  docker run -v /data/osm-postgresql:/var/lib/postgresql homme/openstreetmap-website \
+         initdb startdb createuser createdb createdbfunctions migrate
+
+Import data:
+  The following will import the .osm file at `/tmp/import.osm` into the
+  database.
+
+  docker run -v /data/osm-postgresql:/var/lib/postgresql -v /tmp:/data homme/openstreetmap-website \
+         startdb import
+
+Add users:
+  docker run -v /data/osm-postgresql:/var/lib/postgresql homme/openstreetmap-website \
+         startdb cli
+
+  Run the above command to get a cli in the container and then follow the
+  'Managing Users' instructions at
+  <https://github.com/openstreetmap/openstreetmap-website/blob/master/CONFIGURE.md>.
+
+Start the webserver:
+  Once data is loaded and users have been created run the webserver:
+
+  docker run -P -v /data/osm-postgresql:/var/lib/postgresql homme/openstreetmap-website \
+         startdb startservices

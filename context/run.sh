@@ -1,0 +1,132 @@
+#!/bin/sh
+
+##
+# Run database operations
+#
+# The database affected depends on the value of the $RAILS_ENV
+# environment variable.  This defaults to 'development' but can be set
+# to 'production'
+#
+
+# Command prefix that runs the command as the web user
+asweb="setuser www-data"
+
+die () {
+    msg=$1
+    echo "FATAL ERROR: " msg  > 2
+    exit
+}
+
+_getdbname () {
+    if [ -z "$RAILS_ENV" ] || [ "$RAILS_ENV" = 'development' ]
+    then
+        dbname=openstreetmap    # development
+    else
+        dbname=osm              # production
+    fi
+
+    echo $dbname
+}
+
+startdb () {
+    if ! pgrep postgres > /dev/null
+    then
+        chown -R postgres /var/lib/postgresql/ || die "Could not set permissions on /var/lib/postgresql"
+        service postgresql start || die "Could not start postgresql"
+    fi
+}
+
+initdb () {
+    echo "Initialising postgresql"
+    if [ -d /var/lib/postgresql/9.1/main ] && [ $( ls -A /var/lib/postgresql/9.1/main | wc -c ) -ge 0 ]
+    then
+        die "Initialisation failed: the directory is not empty: /var/lib/postgresql/9.1/main"
+    fi
+
+    mkdir -p /var/lib/postgresql/9.1/main && chown -R postgres /var/lib/postgresql/
+    sudo -u postgres -i /usr/lib/postgresql/9.1/bin/initdb --pgdata /var/lib/postgresql/9.1/main
+    ln -s /etc/ssl/certs/ssl-cert-snakeoil.pem /var/lib/postgresql/9.1/main/server.crt
+    ln -s /etc/ssl/private/ssl-cert-snakeoil.key /var/lib/postgresql/9.1/main/server.key
+}
+
+createuser () {
+    USER=www-data
+    echo "Creating user $USER"
+    setuser postgres createuser -s $USER
+}
+
+createdb () {
+    dbname=$( _getdbname )
+    echo "Creating database $dbname"
+    cd /var/www
+    $asweb bundle exec rake db:create
+}
+
+createdbfunctions () {
+    dbname=$( _getdbname )
+    echo "Creating functions in database $dbname"
+    cd /var/www
+
+    # Install the Postgresql Btree-gist extension
+    $asweb psql -d $dbname -c "CREATE EXTENSION btree_gist"
+
+    # Install the Postgresql functions
+    $asweb psql -d $dbname -c "CREATE FUNCTION maptile_for_point(int8, int8, int4) RETURNS int4 AS '`pwd`/db/functions/libpgosm', 'maptile_for_point' LANGUAGE C STRICT"
+    $asweb psql -d $dbname -c "CREATE FUNCTION tile_for_point(int4, int4) RETURNS int8 AS '`pwd`/db/functions/libpgosm', 'tile_for_point' LANGUAGE C STRICT"
+    $asweb psql -d $dbname -c "CREATE FUNCTION xid_to_int4(xid) RETURNS int4 AS '`pwd`/db/functions/libpgosm', 'xid_to_int4' LANGUAGE C STRICT"
+}
+
+migrate () {
+    echo "Migrating database"
+    cd /var/www
+    $asweb bundle exec rake db:migrate
+}
+
+import () {
+    dbname=$( _getdbname )
+    echo "Importing /data/import.osm into $dbname"
+    $asweb osmosis --read-xml file=/data/import.osm --write-apidb database=$dbname user="www-data" validateSchemaVersion=no
+}
+
+dropdb () {
+    echo "Dropping database"
+    cd /var/www
+    $asweb bundle exec rake db:drop
+}
+
+cli () {
+    echo "Running bash"
+    cd /var/www
+    exec bash
+}
+
+startcgimap () {
+    if ! -e /etc/service/cgimap
+    then
+        ln -s /etc/sv/cgimap /etc/service/ || die "Could not link cgimap into runit"
+        echo "Starting C++ OpenStreetMap API"
+    else
+        sv start cgimap || die "Could not start cgimap"
+        echo "Starting C++ OpenStreetMap API"
+    fi
+}
+
+startservices () {
+    startcgimap
+
+    if ! pgrep apache2 > /dev/null
+    then
+        echo "Starting web server"
+        service apache2 start || die "Could not start apache"
+    fi
+}
+
+help () {
+    cat /usr/local/share/doc/run/help.txt
+}
+
+# Execute the specified command sequence
+for arg 
+do
+    $arg;
+done

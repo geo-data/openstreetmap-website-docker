@@ -1,0 +1,39 @@
+#!/bin/sh
+
+##
+# Runit run script for the cgimap daemon
+#
+# This is adapted from
+# <https://github.com/zerebubuth/openstreetmap-cgimap/blob/master/scripts/cgimap.init>.
+#
+
+CGIMAP_DBNAME=osm; export CGIMAP_DBNAME
+
+# `www-data` user uses passwordless authentication for postgresql so the
+# following are not needed:
+#CGIMAP_HOST=localhost; export CGIMAP_HOST
+#CGIMAP_USERNAME=www-data; export CGIMAP_USERNAME
+#CGIMAP_PASSWORD=osm; export CGIMAP_PASSWORD
+
+#CGIMAP_PIDFILE=cgimap.pid; export CGIMAP_PIDFILE
+CGIMAP_LOGFILE=/var/log/cgimap.log; export CGIMAP_LOGFILE
+
+CGIMAP_MEMCACHE=localhost; export CGIMAP_MEMCACHE
+CGIMAP_RATELIMIT=102400; export CGIMAP_RATELIMIT
+CGIMAP_MAXDEBT=250; export CGIMAP_MAXDEBT
+
+# Ensure postgresql is running
+run startdb || exit 1
+
+# Ensure the logfile exists and is writeable
+touch /var/log/cgimap.log || exit 1
+chown www-data: /var/log/cgimap.log || exit 1
+
+# NOTE: `runit` requires the service to run in the foreground.  However, `map`
+# needs to run as a daemon if we are going to have more than one `map` instance
+# servicing requests.  `fghack` is therefore used to keep the daemon running in
+# the foreground.  See "How can I supervise a daemon that puts itself into the
+# background?" at <http://cr.yp.to/daemontools/faq/create.html#fghack> for
+# further information.  `/sbin/setuser www-data` runs the given command as the
+# user `www-data`.  If you omit that part, the command will be run as root.
+exec /usr/bin/fghack /sbin/setuser www-data /usr/local/bin/map --daemon --port=8000
