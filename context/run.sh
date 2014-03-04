@@ -84,8 +84,22 @@ migrate () {
 
 import () {
     dbname=$( _getdbname )
-    echo "Importing /data/import.osm into $dbname"
-    $asweb osmosis --read-xml file=/data/import.osm --write-apidb database=$dbname user="www-data" validateSchemaVersion=no
+
+    # Find the most recent import.pbf or import.osm
+    import=$( ls -1t /data/import.pbf /data/import.osm | head -1 2>/dev/null )
+    test -n "${import}" || \
+        die "No import file present: expected /data/import.osm or /data/import.pbf"
+
+    # Decide whether we are reading an xml or pbf file
+    if [ echo $import | grep '.osm$' ]
+    then
+        read_cmd=xml
+    else
+        read_cmd=pbf
+    fi
+
+    echo "Importing ${import} into ${dbname}"
+    $asweb osmosis --read-$read_cmd file=$import --write-apidb database=$dbname user="www-data" validateSchemaVersion=no
 }
 
 dropdb () {
@@ -101,13 +115,13 @@ cli () {
 }
 
 startcgimap () {
-    if ! -e /etc/service/cgimap
+    if [ ! -e /etc/service/cgimap ]
     then
+        echo "Starting C++ OpenStreetMap API"
         ln -s /etc/sv/cgimap /etc/service/ || die "Could not link cgimap into runit"
-        echo "Starting C++ OpenStreetMap API"
     else
-        sv start cgimap || die "Could not start cgimap"
         echo "Starting C++ OpenStreetMap API"
+        sv start cgimap || die "Could not start cgimap"
     fi
 }
 
