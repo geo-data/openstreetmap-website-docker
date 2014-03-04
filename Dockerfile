@@ -135,6 +135,9 @@ EXPOSE 80 5432
 # We need the volume for importing data from
 VOLUME ["/data"]
 
+# Add the README
+ADD README.md /usr/local/share/doc/
+
 # Add the help file
 RUN mkdir -p /usr/local/share/doc/run
 ADD help.txt /usr/local/share/doc/run/help.txt

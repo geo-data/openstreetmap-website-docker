@@ -45,3 +45,5 @@ Start the webserver:
 
   docker run -P -v /data/osm-postgresql:/var/lib/postgresql homme/openstreetmap-website \
          startdb startservices
+
+For further information run the cli and look at /usr/local/share/doc/README.md.
