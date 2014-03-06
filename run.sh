@@ -86,12 +86,12 @@ import () {
     dbname=$( _getdbname )
 
     # Find the most recent import.pbf or import.osm
-    import=$( ls -1t /data/import.pbf /data/import.osm | head -1 2>/dev/null )
+    import=$( ls -1t /data/import.pbf /data/import.osm 2>/dev/null | head -1 )
     test -n "${import}" || \
         die "No import file present: expected /data/import.osm or /data/import.pbf"
 
     # Decide whether we are reading an xml or pbf file
-    if [ echo $import | grep '.osm$' ]
+    if echo $import | grep '.osm$'
     then
         read_cmd=xml
     else
