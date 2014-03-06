@@ -62,7 +62,7 @@ createdb () {
     $asweb bundle exec rake db:create
 }
 
-createdbfunctions () {
+createdbfuncs () {
     dbname=$( _getdbname )
     echo "Creating functions in database $dbname"
     cd /var/www
@@ -125,13 +125,30 @@ startcgimap () {
     fi
 }
 
-startservices () {
+startproduction () {
     startcgimap
 
     if ! pgrep apache2 > /dev/null
     then
-        echo "Starting web server"
+        echo "Starting production web server"
         service apache2 start || die "Could not start apache"
+    fi
+}
+
+startdevelopment () {
+    echo "Starting development web server"
+    cd /var/www
+
+    # start the rails server on port 80
+    bundle exec rails server -p 80 || die "Could not start rails server"
+}
+
+startservices () {
+    if [ "$RAILS_ENV" = 'development' ]
+    then
+        startdevelopment
+    else
+        startproduction
     fi
 }
 
