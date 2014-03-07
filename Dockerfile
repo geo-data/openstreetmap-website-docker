@@ -61,10 +61,10 @@ RUN cd /var/www && bundle exec rake assets:precompile
 # The rack interface requires a `tmp` directory
 RUN ln -s /tmp /var/www/tmp
 
-# Enable the osm website in Apache
-ADD apache-osm.conf /etc/apache2/sites-available/osm
+# Add the production and development sites for Apache
+ADD apache-production.conf /etc/apache2/sites-available/production
+ADD apache-development.conf /etc/apache2/sites-available/development
 RUN a2dissite default
-RUN a2ensite osm
 
 # Ensure apache has appropriate permissions
 RUN chown -R www-data: /var/www
@@ -124,7 +124,10 @@ RUN sed -e 's/RewriteRule ^(.*)/#RewriteRule ^(.*)/' \
         -e 's/\/var\/www/\/var\/www\/public/g' \
         /tmp/cgimap.conf > /etc/apache2/sites-available/cgimap
 RUN chmod 644 /etc/apache2/sites-available/cgimap
-RUN a2ensite cgimap
+
+# Create a `devserver` `runit` service for running the development rails server
+RUN mkdir /etc/sv/devserver
+ADD devserver.sh /etc/sv/devserver/run
 
 # Clean up APT when done
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

@@ -125,30 +125,31 @@ startcgimap () {
     fi
 }
 
-startproduction () {
-    startcgimap
-
-    if ! pgrep apache2 > /dev/null
+startdevserver () {
+    if [ ! -e /etc/service/devserver ]
     then
-        echo "Starting production web server"
-        service apache2 start || die "Could not start apache"
+        echo "Starting development server"
+        ln -s /etc/sv/devserver /etc/service/ || die "Could not link devserver into runit"
+    else
+        echo "Starting development server"
+        sv start devserver || die "Could not start devserver"
     fi
-}
-
-startdevelopment () {
-    echo "Starting development web server"
-    cd /var/www
-
-    # start the rails server on port 80
-    bundle exec rails server -p 80 || die "Could not start rails server"
 }
 
 startservices () {
     if [ "$RAILS_ENV" = 'development' ]
     then
-        startdevelopment
+        startdevserver
+        a2ensite development
     else
-        startproduction
+        startcgimap
+        a2ensite cgimap production
+    fi
+
+    # Start apache
+    if ! pgrep apache2 > /dev/null
+    then
+        service apache2 start || die "Could not start apache"
     fi
 }
 
