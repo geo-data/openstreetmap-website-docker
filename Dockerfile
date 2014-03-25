@@ -18,6 +18,7 @@ RUN update-locale LANG=C.UTF-8
 
 # Install Osmosis. Shouldn't need to be altered so put it here to make
 # rebuilding quicker.
+RUN apt-get update -y
 ADD install-osmosis.sh /tmp/
 RUN sh /tmp/install-osmosis.sh
 ADD install-fuse.sh /tmp/
