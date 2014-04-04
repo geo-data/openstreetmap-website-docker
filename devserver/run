@@ -5,9 +5,9 @@
 #
 
 # Ensure postgresql is running
-run startdb || exit 1
+sv start postgresql || exit 1
 
 cd /var/www
 
 # Start the rails server.
-/sbin/setuser www-data bundle exec rails server
+exec /sbin/setuser www-data bundle exec rails server

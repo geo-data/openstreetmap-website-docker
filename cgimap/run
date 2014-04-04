@@ -16,18 +16,18 @@ CGIMAP_DBNAME=osm; export CGIMAP_DBNAME
 #CGIMAP_PASSWORD=osm; export CGIMAP_PASSWORD
 
 #CGIMAP_PIDFILE=cgimap.pid; export CGIMAP_PIDFILE
-CGIMAP_LOGFILE=/var/log/cgimap.log; export CGIMAP_LOGFILE
+#CGIMAP_LOGFILE=/var/log/cgimap.log; export CGIMAP_LOGFILE
 
 CGIMAP_MEMCACHE=localhost; export CGIMAP_MEMCACHE
 CGIMAP_RATELIMIT=102400; export CGIMAP_RATELIMIT
 CGIMAP_MAXDEBT=250; export CGIMAP_MAXDEBT
 
 # Ensure postgresql is running
-run startdb || exit 1
+sv start postgresql || exit 1
 
 # Ensure the logfile exists and is writeable
-touch /var/log/cgimap.log || exit 1
-chown www-data: /var/log/cgimap.log || exit 1
+#touch /var/log/cgimap.log || exit 1
+#chown www-data: /var/log/cgimap.log || exit 1
 
 # NOTE: `runit` requires the service to run in the foreground.  However, `map`
 # needs to run as a daemon if we are going to have more than one `map` instance

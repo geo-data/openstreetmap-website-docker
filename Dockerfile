@@ -105,10 +105,6 @@ RUN cd /tmp/openstreetmap-cgimap-master/ && \
 # service
 RUN apt-get install -y daemontools
 
-# Create a `cgimap` `runit` service
-RUN mkdir /etc/sv/cgimap
-ADD cgimap.sh /etc/sv/cgimap/run
-
 # Enable required apache modules for the cgimap Apache service
 RUN a2enmod proxy proxy_http rewrite
     
@@ -126,9 +122,29 @@ RUN sed -e 's/RewriteRule ^(.*)/#RewriteRule ^(.*)/' \
         /tmp/cgimap.conf > /etc/apache2/sites-available/cgimap
 RUN chmod 644 /etc/apache2/sites-available/cgimap
 
+# Tune postgresql
+ADD postgresql.conf.sed /tmp/
+RUN sed --file /tmp/postgresql.conf.sed --in-place /etc/postgresql/9.1/main/postgresql.conf
+
+# Define the application logging logic
+ADD syslog-ng.conf /etc/syslog-ng/conf.d/local.conf
+RUN rm -rf /var/log/postgresql
+
+# Create a `postgresql` `runit` service
+ADD postgresql /etc/sv/postgresql
+RUN update-service --add /etc/sv/postgresql
+
+# Create a `cgimap` `runit` service
+ADD cgimap /etc/sv/cgimap
+RUN update-service --add /etc/sv/cgimap
+
 # Create a `devserver` `runit` service for running the development rails server
-RUN mkdir /etc/sv/devserver
-ADD devserver.sh /etc/sv/devserver/run
+ADD devserver /etc/sv/devserver
+RUN update-service --add /etc/sv/devserver
+
+# Create an `apache2` `runit` service
+ADD apache2 /etc/sv/apache2
+RUN update-service --add /etc/sv/apache2
 
 # Clean up APT when done
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
