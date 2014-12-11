@@ -23,11 +23,8 @@ ADD install-osmosis.sh /tmp/
 RUN sh /tmp/install-osmosis.sh
 ADD install-fuse.sh /tmp/
 RUN sh /tmp/install-fuse.sh
-
-RUN apt-get install -y software-properties-common python-software-properties
-RUN add-apt-repository -y ppa:webupd8team/java && apt-get update -y 
-RUN echo debconf shared/accepted-oracle-license-v1-1 select true | sudo debconf-set-selections
-RUN apt-get install -y oracle-java7-installer oracle-java7-set-default
+ADD install-java.sh /tmp/
+RUN sh /tmp/install-java.sh
 
 # We want the production OSM setup
 ENV RAILS_ENV production
